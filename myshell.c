@@ -9,54 +9,79 @@
 
 extern char **get_line();
 
-enum {
-   LPAREN,
-   RPAREN,
-   FIN,
-   FOUT,
-   PIPE,
-   BKGRND
-};
-
+/* Struct to remember which options were used.
+*/
 typedef struct {
+   int set;
    int left_paren;
    int right_paren;
    int file_in;
    int file_out;
    int pipe;
    int background;
+   int semi;
 } specialflags;
 
+/* Check to see if any single letter argument is a special
+ * one.  If it is a special char, set its value to true and
+ * also set the "set" variable to set, which is useful to see
+ * if any special options were used.
+*/
 void special_char(char *special, specialflags *flags){
    char s = special[0];
    switch(s){
-      case '(' : flags->left_paren =1; break;
-      case ')' : flags->right_paren = 1; break;
-      case '<' : flags->file_in = 1; break;
-      case '>' : flags->file_out = 1; break;
-      case '|' : flags->pipe = 1; break;
-      case '&' : flags->background = 1; break;
+      case '(' : flags->set = flags->left_paren = TRUE; break;
+      case ')' : flags->set = flags->right_paren = TRUE; break;
+      case '<' : flags->set = flags->file_in = TRUE; break;
+      case '>' : flags->set = flags->file_out = TRUE; break;
+      case '|' : flags->set = flags->pipe = TRUE; break;
+      case '&' : flags->set = flags->background = TRUE; break;
+      case ';' : flags->set = flags->semi = TRUE; break;
       default  : break;
    }
 }
 
+/* Reset all special flags back to zero, so they don't carry
+ * over to the next command.
+*/
+void reset_flags(specialflags *f){
+   f->set = f->left_paren = f->right_paren = f->file_in = 
+   f->file_out = f->pipe = f->background = f->semi = FALSE;
+}
+
+void redirect_input(char **child_argv){
+   const char *path;
+}
+
 main() {
   int i;
-  char **args; 
-  specialflags special_flags = {0,0,0,0,0,0};
+  char **args;
+  char *prompt = "$ ";
+  specialflags special_flags = {0,0,0,0,0,0,0};
 
   while(TRUE) {
+    printf(prompt);
     args = get_line();
+    char **child_argv = args;
     for(i = 0; args[i] != NULL; i++) {
-      if(strlen(args[i])==1) special_char(args[i],&special_flags);
-      printf("Argument %d: %s\n", i, args[i]);
+       if(strlen(args[i])==1) special_char(args[i],&special_flags);
+       if(special_flags.set){
+          child_argv[i] = NULL;
+       }else{
+       }
+       printf("Argument %d: %s\n", i, args[i]);
     }
-    char *child_argv[] = {"ls", NULL};
     pid_t pid = fork();
     if(pid==0){
+       if(special_flags.set == TRUE){
+          if(special_flags.file_in==TRUE) redirect_input(child_argv);
+       }
        if(execvp(args[0],child_argv)!=0)
           printf("Command: %s not found\n",args[0]);
     }else{
+       int status;
+       waitpid(-1,&status,0);
     }
+    reset_flags(&special_flags);
   }
 }
