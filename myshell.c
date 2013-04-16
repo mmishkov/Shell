@@ -12,7 +12,6 @@ extern char **get_line();
 /* Struct to remember which options were used.
 */
 typedef struct {
-<<<<<<< HEAD
 	int set;
 	int left_paren;
 	int right_paren;
