@@ -26,7 +26,6 @@ typedef struct {
 } specialflags;
 
 typedef struct {
-    int set;
     char *path_in;
     char *path_out;
     char *path_pipe;
@@ -53,11 +52,11 @@ int special_char (int *i, char **args, specialflags *flags, specialpaths *paths)
     switch(args[*i][0]){
         case '(' : flags->left_paren = TRUE; break;
         case ')' : flags->right_paren = TRUE; break;
-        case '<' : paths->set = flags->file_in = TRUE; 
+        case '<' : flags->file_in = TRUE; 
                    set_path(i,args,&paths->path_in); break;
-        case '>' : paths->set = flags->file_out = TRUE; 
+        case '>' : flags->file_out = TRUE; 
                    set_path(i,args,&paths->path_out); break;
-        case '|' : paths->set = flags->pipe = TRUE; 
+        case '|' : flags->pipe = TRUE; 
                    set_path(i,args,&paths->path_pipe); break;
         case '&' : flags->background = TRUE; break;
         case ';' : flags->semi = TRUE; break;
@@ -139,7 +138,7 @@ int main() {
     char **args;
     char *prompt = "$ ";
     specialflags special_flags = {0,0,0,0,0,0,0};
-    specialpaths special_paths = {0,NULL,NULL,NULL};
+    specialpaths special_paths = {NULL,NULL,NULL};
     error = FALSE;
     //signal(2, sigproc); //trap ctrl-c
     while(TRUE) {
