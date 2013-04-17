@@ -24,7 +24,6 @@ typedef struct {
     int semi;
 } specialflags;
 
-
 /* Check to see if any single letter argument is a special
  * one.  If it is a special char, set its value to true and
  * also set the "set" variable to set, which is useful to see
