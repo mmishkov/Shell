@@ -109,8 +109,10 @@ void execute(specialflags *special_flags,specialpaths *special_paths,
                 freopen ("/dev/null", "w", stdout);
                 freopen ("/dev/null", "w", stderr);
             }
-            if(execvp (child_args[0], child_args) != 0)
+            if(execvp (child_args[0], child_args) != 0){
                 printf ("Command: %s not found\n", child_args[0]);
+                exit(1);
+            }
         } else {
             // Parent
             int status;
