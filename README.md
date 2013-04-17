@@ -13,3 +13,5 @@ In my case, remosewa is my username, replace it with yours. When you commit it s
 git commit -m "comments go here"
 
 Please add any other information you may find useful.
+
+Need to find parenthesis, semicolon, background process.
