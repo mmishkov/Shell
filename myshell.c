@@ -37,8 +37,10 @@ void print_error(char *string){
    fprintf(stderr,"myshell: %s\n",string);
 }
 
-void set_path(int i,char **args, char **path){
-    if(args[i+1] != NULL) *path = args[i+1];
+/* Set the path variables if command requests it
+*/
+void set_path(int *i,char **args, char **path){
+    if(args[*i+1] != NULL) *path = args[++(*i)];
     else print_error("syntax error");
 }
 
@@ -47,8 +49,8 @@ void set_path(int i,char **args, char **path){
 * also set the "set" variable to set, which is useful to see
 * if any special options were used.
 */
-void special_char (int i, char **args, specialflags *flags, specialpaths *paths) {
-    switch(args[i][0]){
+int special_char (int *i, char **args, specialflags *flags, specialpaths *paths) {
+    switch(args[*i][0]){
         case '(' : flags->left_paren = TRUE; break;
         case ')' : flags->right_paren = TRUE; break;
         case '<' : paths->set = flags->file_in = TRUE; 
@@ -59,8 +61,9 @@ void special_char (int i, char **args, specialflags *flags, specialpaths *paths)
                    set_path(i,args,&paths->path_pipe); break;
         case '&' : flags->background = TRUE; break;
         case ';' : flags->semi = TRUE; break;
-        default : break;
+        default : return FALSE;
     }
+    return TRUE;
 }
 
 /* Reset all special flags back to zero, so they don't carry
@@ -73,19 +76,11 @@ void reset_flags (specialflags *f){
 
 void parse_args(specialflags *special_flags,specialpaths *special_paths, 
                 char **args, char **child_args){
-        int i;
-        int j;
+        int i,j;
         for(i = j = 0; args[i] != NULL; ++i) {
-            if(strlen (args[i]) == 1) {
-                special_char(i,args,special_flags,special_paths);
-                if(special_paths->set && !error) { 
-                    special_paths->set = FALSE;
-                    ++i;
-                    continue;
-                }
-            }
+            if(strlen (args[i]) == 1)
+                if(special_char(&i,args,special_flags,special_paths)) continue;
             child_args[j++] = args[i];
-            printf ("Argument %d: %s\n", i, args[i]);
         }
         child_args[j] = NULL;
 }
@@ -123,6 +118,14 @@ void execute(specialflags *special_flags,specialpaths *special_paths,
         }
 }
 
+int shell_cmd(char **args){
+    if(strcmp (args[0],"exit") == 0) exit(0);
+    if(strcmp (args[0],"cd") == 0) {
+        chdir((args[1] == NULL) ? getenv("HOME") : args[1]);
+        return 1;
+    }
+    return 0;
+}
 
 //potential function to goto when trapping ctrl c.
 //lex is failing with ctrl-c input now, so this wont work anyway.
@@ -142,11 +145,7 @@ int main() {
     while(TRUE) {
         printf (prompt);
         args = get_line();
-        if(strcmp (args[0],"exit") == 0) exit(0);
-        if(strcmp (args[0],"cd") == 0) {
-            chdir((args[1] == NULL) ? getenv("HOME") : args[1]);
-            continue;
-        }
+        if(shell_cmd(args)) continue;
         char **child_args = malloc(sizeof(args) * sizeof(char *));
         assert (child_args != NULL);
         parse_args(&special_flags,&special_paths,args,child_args);
