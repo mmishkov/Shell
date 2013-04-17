@@ -1,11 +1,10 @@
-include <stdio.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <errno.h>
 #include <stdlib.h>
-
 #define TRUE 1
 #define FALSE 0
 
@@ -40,9 +39,10 @@ void special_char(char *special, specialflags *flags){
         case '|' : flags->set = flags->pipe = TRUE; break;
         case '&' : flags->set = flags->background = TRUE; break;
         case ';' : flags->set = flags->semi = TRUE; break;
-default  : break;
+        default  : break;
         }
 }
+
 /* Reset all special flags back to zero, so they don't carry
 * over to the next command.
 */
@@ -55,23 +55,25 @@ void redirect_input(char **child_argv){
         const char *path;
 }
         
-/*potential function to goto when trapping ctrl c.
+//potential function to goto when trapping ctrl c.
 //lex is failing with ctrl-c input now, so this wont work anyway.
-//-Chase*/
+//-Chase
 void sigproc()
 {
         printf("you have pressed ctrl-c\n");
 }
-
+        
 char execute( char **args)
 {
-int status,n;
- pid_t pid;
+ int status,n;
+      pid_t pid;
  char **child_argv = args; 
  specialflags special_flags = {0,0,0,0,0,0,0};
 
- pid = fork();
+if(strcmp(child_argv[0], "exit") == 0) exit(0);
                 
+ pid = fork();
+
   if (pid  < 0)
   {     /* fork a child process           */
        printf("*** ERROR: forking child process failed\n");
@@ -87,14 +89,13 @@ int status,n;
                         if(special_flags.set && special_flags.background)
                         {
                                 freopen("/dev/null", "w", stdout); /*redirect stdout and stderr*/
-                                freopen("/dev/null", "w", stderr);
-      }
+                        }  
                         if(execvp(args[0],child_argv) < 0)
-                        {  
+                        {
                                 printf("Command: %s not found\n",args[0]);
                                 exit(1);
                          }
-        }       
+        }
         else   
         { /*for the parent*/
                         if(!special_flags.set || !special_flags.background) //dont wait if background
@@ -108,38 +109,28 @@ int status,n;
                                 
 }
                         
-main()
-{
-
-         int i;
-         char **args;
+main() {
+        int i;
+        char **args;
         char *prompt = "$ ";
         specialflags special_flags = {0,0,0,0,0,0,0};
-        /*signal(2, sigproc); //trap ctrl-c*/
-        while(TRUE)
-        {       
+        //signal(2, sigproc); //trap ctrl-c
+        while(TRUE) {
                 printf(prompt);
                 args = get_line();
-      if(strcmp(args[i],"exit") == 0) exit(0);
-                        
+         
                 char **child_argv = args;
-                for(i = 0; args[i] != NULL; i++)
-                {
+                for(i = 0; args[i] != NULL; i++) {
                         if(strlen(args[i])==1) special_char(args[i],&special_flags);
-                        if(special_flags.set)
-                        {
+                        if(special_flags.set){
                                 child_argv[i] = ""; //NULL was causing crash.
+                        }else{
                         }
-                        else
-                        {
-}
                         printf("Argument %d: %s\n", i, args[i]);
-        
-        
-  }
-        
-        
-         execute(args);
-         reset_flags(&special_flags);
+                        if(strcmp(args[i],"exit") == 0) return 0;
+                }
+                execute(args);  
+                reset_flags(&special_flags);
+        }               
 }
-  }
+        
