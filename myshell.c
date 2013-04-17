@@ -73,15 +73,6 @@ void reset_flags (specialflags *f){
 
 void parse_args(specialflags *special_flags,specialpaths *special_paths, 
                 char **args, char **child_args){
-        /*
-         * If the user passed "exit", exit the shell.
-        */
-        if(strcmp (args[0],"exit") == 0) exit(0);
-        if(strcmp (args[0],"cd") == 0) {
-            char *path = (args[1] == NULL) ? "~" : args[1];
-            chdir(path);
-            return;
-        }
         int i;
         int j;
         for(i = j = 0; args[i] != NULL; ++i) {
@@ -148,6 +139,11 @@ int main() {
     while(TRUE) {
         printf (prompt);
         args = get_line();
+        if(strcmp (args[0],"exit") == 0) exit(0);
+        if(strcmp (args[0],"cd") == 0) {
+            chdir((args[1] == NULL) ? getenv("HOME") : args[1]);
+            continue;
+        }
         char **child_args = malloc(sizeof(args) * sizeof(char *));
         assert (child_args != NULL);
         parse_args(&special_flags,&special_paths,args,child_args);
