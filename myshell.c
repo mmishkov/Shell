@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <errno.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -51,14 +52,6 @@ void reset_flags (specialflags *f){
             f->file_out = f->pipe = f->background = f->semi = FALSE;
 }
 
-//potential function to goto when trapping ctrl c.
-//lex is failing with ctrl-c input now, so this wont work anyway.
-//-Chase
-void sigproc()
-{
-    printf ("you have pressed ctrl-c\n");
-}
-
 int main() {
     size_t i;
     size_t j;
@@ -67,7 +60,9 @@ int main() {
     char *prompt = "$ ";
     specialflags special_flags = {0,0,0,0,0,0,0,0};
 
-    //signal(2, sigproc); //trap ctrl-c
+    if (signal(SIGINT, SIG_IGN) != SIG_IGN)
+        signal(SIGINT, (sighandler_t) fprintf (stderr,"\n"));
+
     while(TRUE) {
         printf (prompt);
 
