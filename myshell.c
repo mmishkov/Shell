@@ -43,7 +43,8 @@ void special_char(char *special, specialflags *flags){
     }
 }
 
-/* Reset all special flags back to zero, so they don't carry
+/*
+ * Reset all special flags back to zero, so they don't carry
  * over to the next command.
  */
 void reset_flags(specialflags *f){
@@ -51,6 +52,10 @@ void reset_flags(specialflags *f){
             f->file_out = f->pipe = f->background = f->semi = FALSE;
 }
 
+/*
+ * Creates a file from the path provided if file not found and redirects
+ * the output to the file specified.
+ */
 void redirect_output (char **args, int length) {
     const char *path;
     path = args[length - 1];
@@ -71,6 +76,7 @@ void sigproc()
 
 int main() {
     int i;
+    int j;
     char **args;
     char *prompt = "$ ";
     specialflags special_flags = {0,0,0,0,0,0,0};
@@ -79,12 +85,20 @@ int main() {
         printf(prompt);
         args = get_line();
 
-        char **child_argv = malloc (sizeof (char *));
-        child_argv[0] = args[0];
+        char **child_argv = malloc (2 * sizeof (char *));
+        for (i = 0; args[i] != NULL; i++) {
+            child_argv[i] = args[i];
+        }
 
         for(i = 0; args[i] != NULL; i++) {
             if(strlen (args[i]) == 1) {
                 special_char (args[i], &special_flags);
+            } else if (i > 0){
+                child_argv = malloc ((sizeof (child_argv) + 1) * sizeof (char *));
+                for(j = 0; j <= i; j++) {
+                    if (strlen (args[j]) != 1)
+                        child_argv[j] = args[j];
+                }
             }
 
             printf("Argument %d: %s\n", i, args[i]);
@@ -99,7 +113,7 @@ int main() {
             if(special_flags.set == TRUE){
                 if(special_flags.file_in == TRUE) redirect_input(child_argv);
 
-                if (special_flags.file_out == TRUE) {\
+                if (special_flags.file_out == TRUE) {
                     redirect_output (args, i);
                 }
             }
