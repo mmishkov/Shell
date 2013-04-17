@@ -83,7 +83,8 @@ void parse_args(specialflags *special_flags,specialpaths *special_paths,
                     ++i;
                     continue;
                 }
-            } else child_args[j++] = args[i];
+            }
+            child_args[j++] = args[i];
             printf ("Argument %d: %s\n", i, args[i]);
         }
         child_args[j] = NULL;
