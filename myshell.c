@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -31,7 +32,7 @@ typedef struct {
  */
 void special_char(char *special, specialflags *flags){
     char s = special[0];
-    switch(s){
+    switch(s) {
     case '(' : flags->set = flags->left_paren = TRUE; break;
     case ')' : flags->set = flags->right_paren = TRUE; break;
     case '<' : flags->set = flags->file_in = TRUE; break;
@@ -53,8 +54,8 @@ void reset_flags(specialflags *f){
 }
 
 /*
- * Creates a file from the path provided if file not found and redirects
- * the output to the file specified.
+ * Creates a file from the path provided if file not found and
+ * redirects the output to the file specified.
  */
 void redirect_output (char **args, int length) {
     const char *path;
@@ -62,7 +63,7 @@ void redirect_output (char **args, int length) {
     freopen (path, "w", stdout);
 }
 
-void redirect_input (char **child_argv){
+void redirect_input (char **child_argv) {
     const char *path;
 }
 
@@ -75,18 +76,21 @@ void sigproc()
 }
 
 int main() {
-    int i;
-    int j;
+    int i = 0;
+    int j = 0;
     char **args;
     char *prompt = "$ ";
-    specialflags special_flags = {0,0,0,0,0,0,0};
+    specialflags special_flags = {0, 0, 0, 0, 0, 0, 0, 0};
     //signal(2, sigproc); //trap ctrl-c
+
     while(TRUE) {
         printf(prompt);
         args = get_line();
 
         char **child_argv = malloc (2 * sizeof (char *));
-        for (i = 0; args[i] != NULL; i++) {
+        assert (child_argv != NULL);
+
+        for (i = 0; i < (int) sizeof (child_argv); i++) {
             child_argv[i] = args[i];
         }
 
@@ -94,11 +98,20 @@ int main() {
             if(strlen (args[i]) == 1) {
                 special_char (args[i], &special_flags);
             } else if (i > 0){
-                child_argv = malloc ((sizeof (child_argv) + 1) * sizeof (char *));
-                for(j = 0; j <= i; j++) {
-                    if (strlen (args[j]) != 1)
-                        child_argv[j] = args[j];
+                char **old_argv = child_argv;
+                char **new = malloc ((sizeof (child_argv) + 1) * sizeof (char *));
+                assert (new != NULL);
+
+                int count = 0;
+                for(j = 0; j <= i && strlen (args[j]) != 1; j++) {
+                    new[count] = child_argv[j];
+                    count++;
                 }
+
+                new[count] = 0;
+                child_argv = new;
+                memset (old_argv, 0, sizeof (old_argv) * sizeof (char*));
+                //free (old_argv);
             }
 
             printf("Argument %d: %s\n", i, args[i]);
