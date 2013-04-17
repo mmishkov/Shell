@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -32,7 +32,7 @@ typedef struct {
  */
 void special_char(char *special, specialflags *flags){
     char s = special[0];
-    switch(s) {
+    switch(s){
     case '(' : flags->set = flags->left_paren = TRUE; break;
     case ')' : flags->set = flags->right_paren = TRUE; break;
     case '<' : flags->set = flags->file_in = TRUE; break;
@@ -44,8 +44,7 @@ void special_char(char *special, specialflags *flags){
     }
 }
 
-/*
- * Reset all special flags back to zero, so they don't carry
+/* Reset all special flags back to zero, so they don't carry
  * over to the next command.
  */
 void reset_flags(specialflags *f){
@@ -53,98 +52,73 @@ void reset_flags(specialflags *f){
             f->file_out = f->pipe = f->background = f->semi = FALSE;
 }
 
-/*
- * Creates a file from the path provided if file not found and
- * redirects the output to the file specified.
- */
-void redirect_output (char **args, int length) {
-    const char *path;
-    path = args[length - 1];
-    freopen (path, "w", stdout);
-}
-
-void redirect_input (char **child_argv) {
-    const char *path;
-}
-
 //potential function to goto when trapping ctrl c.
 //lex is failing with ctrl-c input now, so this wont work anyway.
 //-Chase
 void sigproc()
-{ 		 
+{
     printf("you have pressed ctrl-c\n");
 }
 
 int main() {
-    int i = 0;
-    int j = 0;
+    size_t i;
+    size_t j;
     char **args;
+    const char *path;
     char *prompt = "$ ";
-    specialflags special_flags = {0, 0, 0, 0, 0, 0, 0, 0};
+    specialflags special_flags = {0,0,0,0,0,0,0,0};
     //signal(2, sigproc); //trap ctrl-c
-
     while(TRUE) {
         printf(prompt);
         args = get_line();
 
-        char **child_argv = malloc (2 * sizeof (char *));
+        size_t args_length = sizeof (args);
+        char **child_argv = malloc (args_length * sizeof (char *));
         assert (child_argv != NULL);
 
-        for (i = 0; i < (int) sizeof (child_argv); i++) {
+        for (i = 0; i < args_length; i++) {
             child_argv[i] = args[i];
         }
 
         for(i = 0; args[i] != NULL; i++) {
             if(strlen (args[i]) == 1) {
                 special_char (args[i], &special_flags);
-            } else if (i > 0){
-                char **old_argv = child_argv;
-                char **new = malloc ((sizeof (child_argv) + 1) * sizeof (char *));
-                assert (new != NULL);
-
-                int count = 0;
-                for(j = 0; j <= i && strlen (args[j]) != 1; j++) {
-                    new[count] = child_argv[j];
-                    count++;
+                if (strcmp (args[i], ">") == 0) {
+                    path = args[i + 1];
+                    for (j = i; j < args_length; j++) {
+                        child_argv[j] = args[j + 2];
+                    }
                 }
-
-                new[count] = 0;
-                child_argv = new;
-                memset (old_argv, 0, sizeof (old_argv) * sizeof (char*));
-                //free (old_argv);
             }
 
-            printf("Argument %d: %s\n", i, args[i]);
-
+            printf ("Argument %d: %s\n", i, args[i]);
             if(strcmp(args[i],"exit") == 0) return 0;
         }
 
         pid_t pid = fork();
-
-        if (pid == 0){
+        if (pid==0) {
             //child process
-            if(special_flags.set == TRUE){
-                if(special_flags.file_in == TRUE) redirect_input(child_argv);
-
+            if (special_flags.set == TRUE) {
+                // Creates a file from the path provided if file not found and
+                // redirects the output to the file specified.
                 if (special_flags.file_out == TRUE) {
-                    redirect_output (args, i);
+                    freopen (path, "w", stdout);
                 }
             }
-
             if(special_flags.set && special_flags.background){
                 freopen("/dev/null", "w", stdout); //redirect stdout and stderr
                 freopen("/dev/null", "w", stderr);
             }
-
-            if(execvp(args[0], child_argv) != 0)
-                printf ("Command: %s not found\n",args[0]);
+            if(execvp (args[0], child_argv) != 0)
+                printf ("Command: %s not found\n", args[0]);
         } else {
             //parent
             int status;
-            if(!special_flags.set || !special_flags.background) //dont wait if background
+            if (!special_flags.set || !special_flags.background) //dont wait if background
                 waitpid (-1, &status, 0);
+
         }
 
-        reset_flags(&special_flags);
+        reset_flags (&special_flags);
     }
 }
