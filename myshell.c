@@ -12,6 +12,8 @@
 extern char **get_line();
 
 int error;
+int free_args = FALSE;
+char **savedargs = NULL;
 
 /* Struct to remember which options were used.
  */
@@ -43,6 +45,32 @@ void set_path(int *i,char **args, char **path){
     else print_error("syntax error");
 }
 
+/* if you see a semicolon, then it removes the rest of the args
+ * from args, and saves them into 'savedargs' so that they can
+ * be handled later.
+ * -Chase
+ */
+void separate_args(int *i, char **args){
+    int j = *i + 1;
+    int count = 0;
+
+    for (; args[j] != NULL; j++) {
+        count++;
+    }
+
+    args[*i] = NULL;
+    *i+=1;
+    savedargs = calloc(j+1,sizeof (char *)); //+1 for null terminator
+    int k;
+    for(k = 0; k < count; k += 1){
+        savedargs[k] = args[*i];
+        args[*i] = NULL;
+        *i += 1;
+    }
+    savedargs[k] = NULL; //add null terminator
+
+}
+
 /* Check to see if any single letter argument is a special
  * one. If it is a special char, set its value to true and
  * also set the "set" variable to set, which is useful to see
@@ -50,17 +78,18 @@ void set_path(int *i,char **args, char **path){
  */
 int special_char (int *i, char **args, specialflags *flags, specialpaths *paths) {
     switch(args[*i][0]){
-        case '(' : flags->left_paren = TRUE; break;
-        case ')' : flags->right_paren = TRUE; break;
-        case '<' : flags->file_in = TRUE;
-                   set_path(i,args,&paths->path_in); break;
-        case '>' : flags->file_out = TRUE;
-                   set_path(i,args,&paths->path_out); break;
-        case '|' : flags->pipe = TRUE;
-                   set_path(i,args,&paths->path_pipe); break;
-        case '&' : flags->background = TRUE; break;
-        case ';' : flags->semi = TRUE; break;
-        default : return FALSE;
+    case '(' : flags->left_paren = TRUE; break;
+    case ')' : flags->right_paren = TRUE; break;
+    case '<' : flags->file_in = TRUE;
+    set_path(i,args,&paths->path_in); break;
+    case '>' : flags->file_out = TRUE;
+    set_path(i,args,&paths->path_out); break;
+    case '|' : flags->pipe = TRUE;
+    set_path(i,args,&paths->path_pipe); break;
+    case '&' : flags->background = TRUE; break;
+    case ';' : flags->semi = TRUE;
+    separate_args(i,args); break;
+    default : return FALSE;
     }
     return TRUE;
 }
@@ -101,8 +130,15 @@ void execute(specialflags *special_flags,specialpaths *special_paths,
         }
         if(special_flags->background) {
             // Redirect stdout and stderr
-            freopen ("/dev/null", "w", stdout);
             freopen ("/dev/null", "w", stderr);
+
+            if (!special_flags->file_out) {
+                freopen ("/dev/null", "w", stdout);
+            }
+
+            if (!special_flags->file_in) {
+                freopen ("/dev/null", "w", stdin);
+            }
         }
         if(execvp (child_args[0], child_args) != 0){
             printf ("Command: %s not found\n", child_args[0]);
@@ -126,6 +162,13 @@ int shell_cmd(char **args){
     return 0;
 }
 
+//called when a child process is exited.
+//-chase
+void sig_handler(int signal) {
+    int status;
+    waitpid(-1, &status, WNOHANG);
+}
+
 int main() {
     char **args;
     char *prompt = "$ ";
@@ -136,17 +179,37 @@ int main() {
     if (signal(SIGINT, SIG_IGN) != SIG_IGN)
         signal(SIGINT, (sighandler_t) fprintf (stderr,"\n"));
 
+    signal(SIGCHLD, sig_handler);
+
     while(TRUE) {
-        printf (prompt);
-        args = get_line();
+        if (savedargs == NULL) {
+            printf (prompt);
+            args = get_line();
+        } else {
+            args = malloc(sizeof(savedargs) * sizeof(char *));
+            int i;
+            for(i =0; savedargs[i] != NULL; i+=1){
+                args[i] = savedargs[i];
+            }
+            args[i] = NULL; //add terminator
+            free(savedargs);
+            savedargs = NULL;
+            free_args = TRUE;
+        }
 
         if(shell_cmd(args)) continue;
+
         char **child_args = malloc(sizeof(args) * sizeof(char *));
         assert (child_args != NULL);
         parse_args(&special_flags,&special_paths,args,child_args);
         execute(&special_flags,&special_paths,child_args);
         reset_flags (&special_flags);
         error = FALSE;
+        if(free_args){
+            free(args);
+            free_args = FALSE;
+        }
+
         free(child_args);
     }
 }
