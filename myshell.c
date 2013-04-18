@@ -19,7 +19,7 @@ char **savedargs = NULL; //used to save args
 /* Struct to remember which options were used.
 */
 typedef struct {
-    int left_paren;
+	int left_paren;
 	int right_paren;
 	int file_in;
 	int file_out;
@@ -221,9 +221,9 @@ int main() {
 		reset_flags (&special_flags);
 		error = FALSE;
 		if(free_args){
-			free(child_args);
+			free(args);
 			free_args = FALSE;
 		}
-		//free(args);
+		free(child_args);
 	}
 }
