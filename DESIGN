@@ -5,63 +5,76 @@ Purpose:
 This document specifies the design of a shell program.
 
 Assumptions:
-The program will be used by a user to execute different file commands
+The program will be used by a user to execute different commands from
+a command line interface.
+The input will come from the keyboard, and the output will be displayed
+on the console.
 
-We start out with a struct called specialflags to remember which option were used:
+Data:
+1. Flag setting structure
+   - stores which special characters were passed
+   
+2. Path storing structure
+   - stores paths that may have been passed through CLI
+   - stores a 2nd command from a pipe
 
-typedef struct
-{
-   int set;
-   int left_paren;
-   int right_paren;
-   int file_in;
-   int file_out;
-   int pipe;
-   int background;
-   int semi;
-} specialflags;
+Operations:
+We will have 6 important functions that will be called in our main:
 
-typedef struct
-{
-  char *path_in;
-  char *path_out;
-  char *path_pipe;
-} specialpaths;
+1. void set_path(index, arguments, paths)
+   - Description: a function that stores the path of a requested
+                  redirection
+   - Input: index in an array of arguments and pointer to a path
+            variable
+   - Output: nothing
+   - Result: path of an I/O redirection
 
-We have 6 imortant functions that we call in our main:
+2. int special_char (index, arguments, special flags, paths)
+   - Description: This function checks to see if any single
+                  letter argument is a special one.
+   - Input: index in an array of arguments, a special flags structure
+            and pointer to a path variable
+   - Output: returns TRUE if the argument is a special character, false
+             otherwise
+   - result: A record of which special character was passed
 
-1.void set_path(int *i, char **args, char **path)
- - sets the path variables if a command requests it
+3. void reset_flags(special flags)
+   - Description: Resets the special flags to zero, so they dont carry
+                  over to the next command.
+   - Input: Special flags structure
+   - Output: nothing
+   - result: resets the special flag structure to 0's
 
-2.int special_char (int *i, char **args, specialflags *flags, specialpaths *paths)
+4. void parse_args(special flags, paths, arguments)
+   - Description: Parses the given arguments
+   - Input: Special flags structure, paths structure, arguments
+   - Output: none
+   - result: Arguments stored in an array with a record of special
+             flags passed.
 
--This function has a switch statement which switches between the different
-special characters(<,>,|,&,;,(,),etc) checking to see if any single letter
-argument is a special one. If it a special char, its value is set to TRUE
+5. void execute(special flags, paths, arguments);
+   - Description: this function handles forking, redirection to files,
+                  background processes,and executes commands
+   - Input: Special flags counter, paths for redirection, and arguments
+            passed by user
+   - Output: nothing
+   - result: creates a child process to execute the commands passed by
+             user
 
-3.void reset_flags(specialflags *f)
--simply just resets the special flags to zero, so they dont carry over to
-the next command.
-
-4.void parse_args(specialflags *special_flags, specialpaths *special_paths, char **args, char **child_args)
--parses the given arguments
-
-5.void execute(specialflags *special_flags, specialpaths *special_paths, char **child_args);
--this function handles forking, redirection to files, background processes,and uses
-system calls fork(), wait(),execvp(),freopen()
-
-6.int shell_cmd(char **args)
--this function handles exit and cd
-
+6. int shell_cmd(arguments)
+   - Description: this function handles exit and cd (change directory)
+   - Input: arguments
+   - Output: True if a cd was performed, otherwise an exit was called
+   - result: Exits the program or changes the directory
 
 Our shell supports the following commands and system calls:
 
-1.The internal shell command exit which terminates the shell
+1. The internal shell command exit which terminates the shell
 We will use the system call: exit()
 
 exit(): The exit() system call terminates the calling process
 
-2.A command with no arguments
+2. A command with no arguments
 We will use the system calls fork(), execvp(), exit() and wait()
 
 fork(): The fork() system call creates a copy of the parent process. The original process fork() is
@@ -73,7 +86,6 @@ execvp() has two aruments: path and argv.
  -path: the location of the new process image
  -argv: pointer to an array of pointers to null-terminated character strings.
 
-
 wait(): The wait() system call blocks the calling process untill one of its child
 processes exits or a signal is recieved.
 If there are at least one child processes running when the call to wait() is made,
@@ -81,13 +93,11 @@ the called will be blocked until one of its child processes exits.
 If there is no child processes running when the call to wait() is made, then this
 wait() has no effect at all.
 
-
-3.A command with arguments
+3. A command with arguments
 Concepts: Command-line parameters
 Details: Argument 0 is the name of the command
 
 -Our shell can execute commands like ls -l
-
 
 4. A command, with or without arguments, executed in the background using &
 
@@ -102,7 +112,7 @@ In our main function we use sigset calling the sigset_handler funtion we
 created: sigset(SIGCHL,sigset_handler)
 
 
-5.A command with or without arguments whose output is redirected to a file
+5. A command with or without arguments whose output is redirected to a file
 
 We will use system call: freopen()
 
@@ -133,11 +143,7 @@ if(pid==0)
 }
 
 
-6.A command with or without arguments whose input is redirected from a file
-example: sort<testfile
+6. A command with or without arguments whose input is redirected from a file
+example: sort<testfile>
 
 System call: freopen()
-
-
-
-
