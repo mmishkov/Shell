@@ -1,0 +1,143 @@
+Design Document
+Assignment 1 : Shell
+
+Purpose:
+This document specifies the design of a shell program.
+
+Assumptions:
+The program will be used by a user to execute different file commands
+
+We start out with a struct called specialflags to remember which option were used:
+
+typedef struct
+{
+   int set;
+   int left_paren;
+   int right_paren;
+   int file_in;
+   int file_out;
+   int pipe;
+   int background;
+   int semi;
+} specialflags;
+
+typedef struct
+{
+  char *path_in;
+  char *path_out;
+  char *path_pipe;
+} specialpaths;
+
+We have 6 imortant functions that we call in our main:
+
+1.void set_path(int *i, char **args, char **path)
+ - sets the path variables if a command requests it
+
+2.int special_char (int *i, char **args, specialflags *flags, specialpaths *paths)
+
+-This function has a switch statement which switches between the different
+special characters(<,>,|,&,;,(,),etc) checking to see if any single letter
+argument is a special one. If it a special char, its value is set to TRUE
+
+3.void reset_flags(specialflags *f)
+-simply just resets the special flags to zero, so they dont carry over to
+the next command.
+
+4.void parse_args(specialflags *special_flags, specialpaths *special_paths, char **args, char **child_args)
+-parses the given arguments
+
+5.void execute(specialflags *special_flags, specialpaths *special_paths, char **child_args);
+-this function handles forking, redirection to files, background processes,and uses
+system calls fork(), wait(),execvp(),freopen()
+
+6.int shell_cmd(char **args)
+-this function handles exit and cd
+
+
+Our shell supports the following commands and system calls:
+
+1.The internal shell command exit which terminates the shell
+We will use the system call: exit()
+
+exit(): The exit() system call terminates the calling process
+
+2.A command with no arguments
+We will use the system calls fork(), execvp(), exit() and wait()
+
+fork(): The fork() system call creates a copy of the parent process. The original process fork() is
+the parent process and the newly created process is the child process. Both processes return from
+the system call and execute the next instruction.The system calls does not take any arguments and it
+returns a negative value when the creation of a child process was not successful.Otherwise fork() returns a zero.
+
+execvp() has two aruments: path and argv.
+ -path: the location of the new process image
+ -argv: pointer to an array of pointers to null-terminated character strings.
+
+
+wait(): The wait() system call blocks the calling process untill one of its child
+processes exits or a signal is recieved.
+If there are at least one child processes running when the call to wait() is made,
+the called will be blocked until one of its child processes exits.
+If there is no child processes running when the call to wait() is made, then this
+wait() has no effect at all.
+
+
+3.A command with arguments
+Concepts: Command-line parameters
+Details: Argument 0 is the name of the command
+
+-Our shell can execute commands like ls -l
+
+
+4. A command, with or without arguments, executed in the background using &
+
+We will use system calls sigset()
+
+sigset() is the system call that helps execute commands in the background.
+
+In our code we have a function called sigset_handler(signal)
+which does a wait(&status);
+
+In our main function we use sigset calling the sigset_handler funtion we
+created: sigset(SIGCHL,sigset_handler)
+
+
+5.A command with or without arguments whose output is redirected to a file
+
+We will use system call: freopen()
+
+example:ls -l>foo
+
+freopen() system call take in parameters: char *path, char *mode, and FILE *stream.
+-freopen opens the file whose name is in the string pointed by the path and
+associates a stream with it.
+-mode specifies either r(open file for reading), w(create file for writing), w+,r+,etc.
+We implement this by scanning the argunemts given by the user and if we encounted a ">"
+special characted, we store the path that is given, and moce the arguments to the
+left by one. This allows our shell to perform I/O redirection.
+Note: execvp() will not perform redirection.
+
+We create a file from the path provided if file is not specified,and redirect the
+output to the specified file:
+
+pid_t= fork();
+
+if(pid==0)
+{
+   if(special_flags.set == TRUE)
+{
+        if(special_flags.file_out == TRUE)
+        {
+          freopen(path, "w", stdout);
+        }
+}
+
+
+6.A command with or without arguments whose input is redirected from a file
+example: sort<testfile
+
+System call: freopen()
+
+
+
+
