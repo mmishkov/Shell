@@ -52,11 +52,11 @@ int special_char (int *i, char **args, specialflags *flags, specialpaths *paths)
     switch(args[*i][0]){
         case '(' : flags->left_paren = TRUE; break;
         case ')' : flags->right_paren = TRUE; break;
-        case '<' : flags->file_in = TRUE; 
+        case '<' : flags->file_in = TRUE;
                    set_path(i,args,&paths->path_in); break;
-        case '>' : flags->file_out = TRUE; 
+        case '>' : flags->file_out = TRUE;
                    set_path(i,args,&paths->path_out); break;
-        case '|' : flags->pipe = TRUE; 
+        case '|' : flags->pipe = TRUE;
                    set_path(i,args,&paths->path_pipe); break;
         case '&' : flags->background = TRUE; break;
         case ';' : flags->semi = TRUE; break;
@@ -144,6 +144,10 @@ int main() {
     while(TRUE) {
         printf (prompt);
         args = get_line();
+
+        if (signal(SIGINT, SIG_IGN) != SIG_IGN)
+                signal(SIGINT, (sighandler_t) fprintf (stderr,"\n"));
+
         if(shell_cmd(args)) continue;
         char **child_args = malloc(sizeof(args) * sizeof(char *));
         assert (child_args != NULL);
