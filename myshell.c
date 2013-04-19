@@ -116,8 +116,10 @@ void parse_args(specialflags *special_flags,specialpaths *special_paths,
 void execute(specialflags *special_flags,specialpaths *special_paths,
         char **child_args){
     pid_t pid = fork();
+
     if (pid == 0) {
         // Child process
+        setpgid(0, 0);
         /*
          * Creates a file from the path provided if file not
          * found. Redirects the output to the file specified.
@@ -128,18 +130,7 @@ void execute(specialflags *special_flags,specialpaths *special_paths,
         if (special_flags->file_in){
             freopen(special_paths->path_in,"r",stdin);
         }
-        if(special_flags->background) {
-            // Redirect stdout and stderr
-            freopen ("/dev/null", "w", stderr);
 
-            if (!special_flags->file_out) {
-                freopen ("/dev/null", "w", stdout);
-            }
-
-            if (!special_flags->file_in) {
-                freopen ("/dev/null", "w", stdin);
-            }
-        }
         if(execvp (child_args[0], child_args) != 0){
             printf ("Command: %s not found\n", child_args[0]);
             exit(1);
@@ -150,6 +141,9 @@ void execute(specialflags *special_flags,specialpaths *special_paths,
         // Don't wait if background
         if (!special_flags->background)
             waitpid (-1, &status, 0);
+        else {
+            printf ("Process %d in background.\n", (int) pid);
+        }
     }
 }
 
@@ -164,7 +158,7 @@ int shell_cmd(char **args){
 
 //called when a child process is exited.
 //-chase
-void sig_handler(int signal) {
+void sig_handler() {
     int status;
     waitpid(-1, &status, WNOHANG);
 }
@@ -188,7 +182,7 @@ int main() {
         } else {
             args = malloc(sizeof(savedargs) * sizeof(char *));
             int i;
-            for(i =0; savedargs[i] != NULL; i+=1){
+            for(i =0; savedargs[i] != NULL; i += 1){
                 args[i] = savedargs[i];
             }
             args[i] = NULL; //add terminator
