@@ -20,6 +20,8 @@ FLEX   = flex
 
 all: $(EXE)
 
+again: spotless all
+
 $(EXE): $(OBJ)
 	$(GCC) -o $@ $^ $(LFLAG)
 
