@@ -6,7 +6,9 @@ LGEN   = $(LEX:.c=.yy.c)
 OBJ    = $(SRC:.c=.o) $(LGEN:.c=.o)
 MKFILE = Makefile
 README = README
+DESGN  = DESIGN
 JUNK   = $(OBJ) $(LGEN)
+ALL    = $(SRC) $(LEX) $(DESGN) $(MKFILE)
 EXE    = myshell
 
 GCC    = gcc
@@ -29,6 +31,9 @@ $(EXE): $(OBJ)
 
 %.o:%.c
 	$(GCC) $(FLAGS) -c $^
+
+tar:
+	tar -cf $(EXE).tar $(ALL) 
 
 clean:
 	rm $(JUNK)
