@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <errno.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,6 +10,7 @@
 #define TRUE 1
 #define FALSE 0
 
+typedef void (*sighandler_t)(int);
 extern char **get_line();
 
 int error;
@@ -119,7 +121,8 @@ void execute(specialflags *special_flags,specialpaths *special_paths,
 
     if (pid == 0) {
         // Child process
-        setpgid(0, 0);
+        if (special_flags->background)
+            setpgid(0, 0);
         /*
          * Creates a file from the path provided if file not
          * found. Redirects the output to the file specified.
@@ -148,6 +151,7 @@ void execute(specialflags *special_flags,specialpaths *special_paths,
 }
 
 int shell_cmd(char **args){
+    if(args[0] == NULL) return 1;
     if(strcmp (args[0],"exit") == 0) exit(0);
     if(strcmp (args[0],"cd") == 0) {
         chdir((args[1] == NULL) ? getenv("HOME") : args[1]);
