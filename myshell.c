@@ -192,7 +192,7 @@ int main() {
 	specialflags special_flags = {0,0,0,0,0,0,0};
 	specialpaths special_paths = {NULL,NULL,NULL};
 	error = FALSE;
-	//signal(SIGCHLD, sig_handler); //listen for child exiting.
+	signal(SIGCHLD, sig_handler); //listen for child exiting.
 	//signal(2, sigproc); //trap ctrl-c
 	/*      
 	This isn't working in minix: error: 'sighandler_t'undeclared (first use in this function)
