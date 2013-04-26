@@ -67,31 +67,46 @@ void set_path (int *i,char **args, char **path) {
  * be handled later.
  * -Chase
  */
-void separate_args (int *i, char **args) {
-    int j = *i + 1;
-    int count = 0;
+void separate_args (int *i, char **args, int has_paren) {
+    if (!has_paren) {
+        int j = *i + 1;
+        int count = 0;
+
+        for (; args[j] != NULL; j++) {
+            count++;
+        }
+
+        //+1 for null terminator
+        args[(*i)++] = NULL;
+
+        savedargs = calloc (j + 1, sizeof (char *));
+        assert (savedargs != NULL);
+        int k;
+
+        for (k = 0; k < count; k++) {
+            savedargs[k] = args[*i];
+            args[(*i)++] = NULL;
+        }
+
+        //add null terminator
+        savedargs[k] = NULL;
+    }
+}
+
+void remove_paren (int *i, char **args) {
+    int j = *i;
 
     for (; args[j] != NULL; j++) {
-        count++;
+        if (strcmp (args[j], "(") == 0) {
+            args[j] = " ";
+        } else if (strcmp (args[j], ")") == 0) {
+            if (args[j + 1] != NULL) {
+                args[j] = args[j + 1];
+            } else {
+                args[j] = NULL;
+            }
+        }
     }
-
-    //+1 for null terminator
-    args[(*i)++] = NULL;
-
-    savedargs = calloc (j + 1, sizeof (char *));
-    assert (savedargs != NULL);
-    int k;
-
-    for (k = 0; k < count; k++) {
-        savedargs[k] = args[*i];
-        printf ("%s\n", savedargs[k]);
-        args[(*i)++] = NULL;
-    }
-    printf ("Done\n");
-
-    //add null terminator
-    savedargs[k] = NULL;
-    printf ("NULL\n");
 }
 
 /* Check to see if any single letter argument is a special
@@ -102,8 +117,10 @@ void separate_args (int *i, char **args) {
 int special_char (int *i, char **args, specialflags *flags,
         specialpaths *paths) {
     switch (args[*i][0]){
-        case '(' : flags->left_paren = TRUE; break;
+        case '(' : flags->left_paren = TRUE;
+                   remove_paren (i, args); break;
         case ')' : flags->right_paren = TRUE; break;
+                   remove_paren (i, args); break;
         case '<' : flags->file_in = TRUE;
                    set_path(i, args, &paths->path_in); break;
         case '>' : flags->file_out = TRUE;
@@ -112,7 +129,7 @@ int special_char (int *i, char **args, specialflags *flags,
                    set_path(i, args, &paths->path_pipe); break;
         case '&' : flags->background = TRUE; break;
         case ';' : flags->semi = TRUE;
-                   separate_args(i, args); break;
+                   separate_args (i, args, (int) flags->left_paren); break;
         default : return FALSE;
     }
 
@@ -132,14 +149,22 @@ void parse_args (specialflags *special_flags, specialpaths *special_paths,
     int i,j;
 
     for (i = j = 0; args[i] != NULL; i++) {
-        printf ("strlen\n");
         if (strlen (args[i]) == 1 && special_char (&i, args,
-                special_flags, special_paths))
+                special_flags, special_paths)) {
+            if (special_flags->left_paren) {
+                i++;
+                break;
+            }
             continue;
+        }
         child_args[j++] = args[i];
-        printf ("parse_args: %s\n", child_args[j - 1]);
     }
-    printf ("parse_args: Done\n");
+
+    if (special_flags->left_paren) {
+        for (; args[i] != NULL; i++) {
+            child_args[j++] = args[i];
+        }
+    }
 
     child_args[j] = NULL;
 }
@@ -219,14 +244,22 @@ void kill_sig() {
     }
 }
 
-int exec_shell () {
+void exec_shell (int loop) {
+
+    // Boolean for terminating the while loop within a subshell
+    int terminate = FALSE;
     char **args;
     char *prompt = "\n$ ";
     specialflags special_flags = {0,0,0,0,0,0,0};
     specialpaths special_paths = {NULL,NULL,NULL};
     error = FALSE;
 
-    while (TRUE) {
+    if (loop == FALSE) {
+        terminate = TRUE;
+        loop = TRUE;
+    }
+
+    while (loop) {
         if (savedargs == NULL) {
             printf (prompt);
             args = get_line();
@@ -237,12 +270,10 @@ int exec_shell () {
 
             for(i = 0; savedargs[i] != NULL; i++) {
                 args[i] = savedargs[i];
-                printf ("%s\n", args[i]);
             }
 
             //add terminator
             args[i] = NULL;
-            free (savedargs);
             savedargs = NULL;
             free_args = TRUE;
         }
@@ -252,32 +283,42 @@ int exec_shell () {
         char **child_args = malloc (sizeof (args) * sizeof (char *));
         assert (child_args != NULL);
 
-        printf ("Parsing args\n");
         parse_args (&special_flags, &special_paths, args, child_args);
-        printf ("Done parsing\n");
 
         if (special_flags.left_paren) {
-            savedargs = args;
-            exec_shell ();
+            int one_loop = FALSE;
+            savedargs = child_args;
+            exec_shell (one_loop);
+            terminate = FALSE;
         } else {
-            printf ("Executing\n");
             execute (&special_flags, &special_paths, child_args);
-            reset_flags (&special_flags);
-            error = FALSE;
-
-            if (free_args) {
-                free (args);
-                free_args = FALSE;
-            }
-
-            free (child_args);
         }
+
+        // If within a subshell and a semicolon command was used, stay
+        // in the loop
+        if (terminate && !special_flags.semi) {
+            loop = FALSE;
+        }
+
+        reset_flags (&special_flags);
+        error = FALSE;
+
+        if (free_args) {
+            free_args = FALSE;
+            args = NULL;
+        }
+
+        child_args = NULL;
     }
 }
 
 int main() {
+    int loop = TRUE;
+
     signal (SIGINT, kill_sig);
     signal (SIGCHLD, sig_handler);
 
-    return exec_shell ();
+    exec_shell (loop);
+
+    return 0;
 }
