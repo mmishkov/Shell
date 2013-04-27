@@ -155,6 +155,19 @@ Algorithm for set_path():
    the path.
    Else, print an error message.
 
+Algorithm for separate_args():
+1. If the arguments passed will not go through a subshell
+
+2.    Traverse through the arguments after the semicolon
+
+3.    Copy the arguments after the semicolon and store them in another
+      array.
+      
+Algorithm for remove_paren():
+1. Traverse through the array of arguments, and remove any "(" or ")"
+   that is encountered.
+   If a ")" is found, replace with the argument after it, if not NULL.
+ 
 Algorithm for special_char():
 1. Set a flag for the special character that was passed.
 
@@ -171,3 +184,6 @@ Algorithm for parse_args():
 3.    Copy the argument to the array of arguments for child process
 
 4. Set a NULL at the end of child arguments for termination
+
+Algorithm for execute():
+1. 
