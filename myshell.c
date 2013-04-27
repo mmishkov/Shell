@@ -55,7 +55,7 @@ void print_error (char *string) {
 
 /* Set the path variables if command requests it
  */
-void set_path (int *i,char **args, char **path) {
+void set_path (int *i, char **args, char **path) {
     if (args[*i+1] != NULL)
         *path = args[++(*i)];
     else
@@ -93,6 +93,9 @@ void separate_args (int *i, char **args, int has_paren) {
     }
 }
 
+/*
+ * Removes a single set of parenthesis from the arguments passed.
+ */
 void remove_paren (int *i, char **args) {
     int j = *i;
 
@@ -171,8 +174,19 @@ void parse_args (specialflags *special_flags, specialpaths *special_paths,
 
 void execute (specialflags *special_flags, specialpaths *special_paths,
         char **child_args) {
+
+    // Change the current working directory if requested
     if (strcmp (child_args[0],"cd") == 0) {
-        chdir((child_args[1] == NULL) ? getenv("HOME") : child_args[1]);
+
+        /*
+         * If the argument doesn't contain a path, change the directory
+         * to home. If an invalid path was passed, notify user.
+         */
+        if (chdir((child_args[1] == NULL) ? getenv("HOME") :
+                child_args[1]) == -1) {
+            printf ("%s: %s: no such file or directory\n",
+                    child_args[0], child_args[1]);
+        }
     } else {
         pid_t pid = fork();
 
@@ -219,11 +233,6 @@ int shell_cmd (char **args){
 
     if (strcmp (args[0],"exit") == 0) exit(0);
 
-    /*if (strcmp (args[0],"cd") == 0) {
-        chdir((args[1] == NULL) ? getenv("HOME") : args[1]);
-        return 1;
-    }*/
-
     return 0;
 }
 
@@ -254,12 +263,22 @@ void exec_shell (int loop) {
     specialpaths special_paths = {NULL,NULL,NULL};
     error = FALSE;
 
+    /*
+     * If the current call of exec_shell is within a subshell,
+     * set a flag letting the current run know that it is in a subshell
+     * and make sure the loop terminates.
+     */
     if (loop == FALSE) {
         terminate = TRUE;
         loop = TRUE;
     }
 
     while (loop) {
+
+        // Get the current working directory
+        char cwd[1024];
+        getcwd(cwd, sizeof (cwd));
+
         if (savedargs == NULL) {
             printf (prompt);
             args = get_line();
@@ -285,10 +304,21 @@ void exec_shell (int loop) {
 
         parse_args (&special_flags, &special_paths, args, child_args);
 
+        /*
+         * If the arguments contained made a call for a subshell,
+         * send a flag to the recursive call of executing a shell to
+         * signify a termination of the loop.
+         */
         if (special_flags.left_paren) {
             int one_loop = FALSE;
             savedargs = child_args;
             exec_shell (one_loop);
+
+            /*
+             * Change the directory back to the outer shell's current
+             * working directory.
+             */
+            chdir (cwd);
             terminate = FALSE;
         } else {
             execute (&special_flags, &special_paths, child_args);
@@ -318,7 +348,8 @@ int main() {
     signal (SIGINT, kill_sig);
     signal (SIGCHLD, sig_handler);
 
+    // Execute the shell program
     exec_shell (loop);
 
-    return 0;
+    exit (0);
 }
