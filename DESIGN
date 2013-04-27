@@ -1,4 +1,4 @@
-Design Document
+﻿Design Document
 Assignment 1 : Shell
 
 Purpose:
@@ -147,3 +147,27 @@ if(pid==0)
 example: sort<testfile>
 
 System call: freopen()
+
+Algorithms:
+
+Algorithm for set_path():
+1. If there is an argument after the special character, store it as
+   the path.
+   Else, print an error message.
+
+Algorithm for special_char():
+1. Set a flag for the special character that was passed.
+
+2. If the special character is a bracket or a | for a pipe, store the
+   path.
+   
+3. If no special character was passed, return FALSE.
+
+Algorithm for parse_args():
+1. For each argument passed:
+
+2.    If the argument is a special character, continue through loop
+
+3.    Copy the argument to the array of arguments for child process
+
+4. Set a NULL at the end of child arguments for termination
