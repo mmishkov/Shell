@@ -1,15 +1,12 @@
-Shell
-=====
+README
+Paul Scherer, Maria Mishkova, Chase Wilson, Nicholas Smith
+cmps 111
+Programming assignment 1: Shell
 
-cmps 111 Project 1
+-We implemented steps 1 through 6 of the assignment.
 
+-All of our algorithms and functions are explained in
+the Design Document.
 
-Useful github stuff
-
-
-for the commits, use the URL https://remosewa@github.com/mmishkov/Shell.git 
-In my case, remosewa is my username, replace it with yours. When you commit it shoud ask you for your github pw.
-
-git commit -m "comments go here"
-
-Please add any other information you may find useful.
+-Unusual problems:
+     Program crashes if more than 3 semicolons are used for commands
