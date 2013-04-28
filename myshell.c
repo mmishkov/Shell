@@ -10,7 +10,9 @@
  * CHANGED: Paul Scherer    April 17, 2013
  * CHANGED: Paul Scherer    April 18, 2013
  * CHANGED: Chase Wilson    April 24, 2013
+ * CHANGED: Maria Mishkova  April 27, 2013
  */
+
 
 #include <assert.h>
 #include <errno.h>
@@ -30,9 +32,11 @@ int free_args = FALSE;
 char **savedargs = NULL;
 int saved_pid = 0;
 
-/* Struct to remember which options were used.
+/*
+ * Struct to remember which options were used.
  */
-typedef struct {
+typedef struct
+{
     int left_paren;
     int right_paren;
     int file_in;
@@ -42,32 +46,38 @@ typedef struct {
     int semi;
 } specialflags;
 
-typedef struct {
+typedef struct
+{
     char *path_in;
     char *path_out;
     char *path_pipe;
 } specialpaths;
 
-void print_error (char *string) {
+void print_error (char *string)
+{
     error = TRUE;
     fprintf (stderr,"myshell: %s\n",string);
 }
 
-/* Set the path variables if command requests it
+/*
+ * Set the path variables if command requests it
  */
-void set_path (int *i, char **args, char **path) {
+void set_path (int *i, char **args, char **path)
+{
     if (args[*i+1] != NULL)
         *path = args[++(*i)];
     else
         print_error ("syntax error");
 }
 
-/* if you see a semicolon, then it removes the rest of the args
+/*
+ * If you see a semicolon, then it removes the rest of the args
  * from args, and saves them into 'savedargs' so that they can
  * be handled later.
  * -Chase
  */
-void separate_args (int *i, char **args, int has_paren) {
+void separate_args (int *i, char **args, int has_paren)
+{
     if (!has_paren) {
         int j = *i + 1;
         int count = 0;
@@ -96,7 +106,8 @@ void separate_args (int *i, char **args, int has_paren) {
 /*
  * Removes a single set of parenthesis from the arguments passed.
  */
-void remove_paren (int *i, char **args) {
+void remove_paren (int *i, char **args)
+{
     int j = *i;
 
     for (; args[j] != NULL; j++) {
@@ -112,13 +123,15 @@ void remove_paren (int *i, char **args) {
     }
 }
 
-/* Check to see if any single letter argument is a special
+/*
+ * Check to see if any single letter argument is a special
  * one. If it is a special char, set its value to true and
  * also set the "set" variable to set, which is useful to see
  * if any special options were used.
  */
 int special_char (int *i, char **args, specialflags *flags,
-        specialpaths *paths) {
+        specialpaths *paths)
+{
     switch (args[*i][0]){
         case '(' : flags->left_paren = TRUE;
                    remove_paren (i, args); break;
@@ -140,16 +153,19 @@ int special_char (int *i, char **args, specialflags *flags,
     return TRUE;
 }
 
-/* Reset all special flags back to zero, so they don't carry
+/*
+ * Reset all special flags back to zero, so they don't carry
  * over to the next command.
  */
-void reset_flags (specialflags *f) {
+void reset_flags (specialflags *f)
+{
     f->left_paren = f->right_paren = f->file_in =
             f->file_out = f->pipe = f->background = f->semi = FALSE;
 }
 
 void parse_args (specialflags *special_flags, specialpaths *special_paths,
-        char **args, char **child_args) {
+        char **args, char **child_args)
+{
     int i,j;
 
     for (i = j = 0; args[i] != NULL; i++) {
@@ -174,7 +190,8 @@ void parse_args (specialflags *special_flags, specialpaths *special_paths,
 }
 
 void execute (specialflags *special_flags, specialpaths *special_paths,
-        char **child_args) {
+        char **child_args)
+{
 
     // Change the current working directory if requested
     if (strcmp (child_args[0],"cd") == 0) {
@@ -229,7 +246,12 @@ void execute (specialflags *special_flags, specialpaths *special_paths,
     }
 }
 
-int shell_cmd (char **args){
+/*
+ * Handles exit and prompts the user again if they press enter
+ * without typing a command.
+ */
+int shell_cmd (char **args)
+{
     if (args[0] == NULL) return 1;
 
     if (strcmp (args[0],"exit") == 0) exit(0);
@@ -237,14 +259,18 @@ int shell_cmd (char **args){
     return 0;
 }
 
-/*called when a child process is exited.*/
-void sig_handler() {
+/*
+ * called when a child process is exited.
+ */
+void sig_handler()
+{
     int status;
 
     waitpid(-1, &status, WNOHANG);
 }
 
-void kill_sig() {
+void kill_sig()
+{
 
     /*catch ctrl+c*/
     if (saved_pid != 0) {
@@ -253,9 +279,10 @@ void kill_sig() {
     }
 }
 
-void exec_shell (int loop) {
+void exec_shell (int loop)
+{
 
-    /* Boolean for terminating the while loop within a subshell*/
+    /* Boolean for terminating the while loop within a subshell */
     int terminate = FALSE;
     char **args;
     char *prompt = "\n$ ";
@@ -275,7 +302,7 @@ void exec_shell (int loop) {
 
     while (loop) {
 
-        /* Get the current working directory*/
+        /* Get the current working directory */
         char cwd[1024];
         getcwd(cwd, sizeof (cwd));
 
@@ -296,6 +323,7 @@ void exec_shell (int loop) {
             savedargs = NULL;
             free_args = TRUE;
         }
+
         if (shell_cmd (args)) continue;
 
         char **child_args = malloc (sizeof (args) * sizeof (char *));
@@ -324,7 +352,8 @@ void exec_shell (int loop) {
         }
 
         /* If within a subshell and a semicolon command was used, stay
-         in the loop*/
+         * in the loop
+         */
         if (terminate && !special_flags.semi) {
             loop = FALSE;
         }
@@ -341,13 +370,17 @@ void exec_shell (int loop) {
     }
 }
 
-int main() {
+/*
+ * Main : calls exec_shell which executes the shell program
+ */
+int main()
+{
     int loop = TRUE;
 
     signal (SIGINT, kill_sig);
     signal (SIGCHLD, sig_handler);
 
-    /*Execute the shell program*/
+    /* Execute the shell program */
     exec_shell (loop);
 
     exit (0);
