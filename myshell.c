@@ -132,7 +132,8 @@ int special_char (int *i, char **args, specialflags *flags,
                    set_path(i, args, &paths->path_pipe); break;
         case '&' : flags->background = TRUE; break;
         case ';' : flags->semi = TRUE;
-                   separate_args (i, args, (int) flags->left_paren); break;
+                   separate_args (i, args, (int) flags->left_paren);
+                   break;
         default : return FALSE;
     }
 
@@ -214,11 +215,11 @@ void execute (specialflags *special_flags, specialpaths *special_paths,
             }
         } else {
 
-            // Parent
+            /* Parent */
             int status;
             saved_pid = pid;
 
-            // Don't wait if background
+            /* Don't wait if background */
             if (!special_flags->background)
                 waitpid (-1, &status, 0);
             else {
@@ -236,8 +237,7 @@ int shell_cmd (char **args){
     return 0;
 }
 
-//called when a child process is exited.
-//-chase
+/*called when a child process is exited.*/
 void sig_handler() {
     int status;
 
@@ -246,7 +246,7 @@ void sig_handler() {
 
 void kill_sig() {
 
-    //catch ctrl+c
+    /*catch ctrl+c*/
     if (saved_pid != 0) {
         kill (saved_pid,SIGKILL);
         saved_pid = 0;
@@ -255,7 +255,7 @@ void kill_sig() {
 
 void exec_shell (int loop) {
 
-    // Boolean for terminating the while loop within a subshell
+    /* Boolean for terminating the while loop within a subshell*/
     int terminate = FALSE;
     char **args;
     char *prompt = "\n$ ";
@@ -275,7 +275,7 @@ void exec_shell (int loop) {
 
     while (loop) {
 
-        // Get the current working directory
+        /* Get the current working directory*/
         char cwd[1024];
         getcwd(cwd, sizeof (cwd));
 
@@ -291,12 +291,11 @@ void exec_shell (int loop) {
                 args[i] = savedargs[i];
             }
 
-            //add terminator
+            /*add terminator*/
             args[i] = NULL;
             savedargs = NULL;
             free_args = TRUE;
         }
-
         if (shell_cmd (args)) continue;
 
         char **child_args = malloc (sizeof (args) * sizeof (char *));
@@ -324,8 +323,8 @@ void exec_shell (int loop) {
             execute (&special_flags, &special_paths, child_args);
         }
 
-        // If within a subshell and a semicolon command was used, stay
-        // in the loop
+        /* If within a subshell and a semicolon command was used, stay
+         in the loop*/
         if (terminate && !special_flags.semi) {
             loop = FALSE;
         }
@@ -348,7 +347,7 @@ int main() {
     signal (SIGINT, kill_sig);
     signal (SIGCHLD, sig_handler);
 
-    // Execute the shell program
+    /*Execute the shell program*/
     exec_shell (loop);
 
     exit (0);

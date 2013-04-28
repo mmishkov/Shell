@@ -1,4 +1,6 @@
-﻿Design Document
+Design Document
+Paul Scherer, Maria Mishkova, Chase Wilson, Nicholas Smith
+
 Assignment 1 : Shell
 
 Purpose:
@@ -66,6 +68,28 @@ We will have 6 important functions that will be called in our main:
    - Input: arguments
    - Output: True if a cd was performed, otherwise an exit was called
    - result: Exits the program or changes the directory
+
+7. void separate_args(index, arguments)
+   - Description: if you see a semicolon, it removes the rest of the
+                  arguments and saves them so they can be handled later.
+   - Input: Index of semicolon, arguments, and boolean whether for a
+            subshell.
+   - Output: nothing
+   - result: Saved arguments for semicolon command
+   
+8. void remove_paren (index, arguments)
+   - Description: Removes a single set of parenthesis from the
+                  arguments passed.
+   - Input: index of parenthesis, arguments
+   - Output: nothing
+   - Result: the same arguments passed through, but without "(" or ")"
+   
+9. void exec_shell()
+   - Description: Main execution method for implementing a UNIX based
+                  shell.
+   - Input: flag for function recursion
+   - Output: nothing
+   - result: prompt for user input of commands and command execution
 
 Our shell supports the following commands and system calls:
 
@@ -186,4 +210,48 @@ Algorithm for parse_args():
 4. Set a NULL at the end of child arguments for termination
 
 Algorithm for execute():
-1. 
+1. Handle cd command if requested: If the user does not specify a path, we change the 
+directory to home. Error if invalid path is passed.
+
+2.Otherwise, fork() and if in child process,handle special flag for background, calling setpgid(),
+  create a file from path provided if file not found, and redirect the output to the specified file,
+  using freopen() 
+
+3.If in parent process, call waitpid(-1, &status, 0) if !special_flags->background.
+
+Algorithm for shell_cmd():
+
+1. Handle exit system call
+
+2. Handle pressing enter key without a specified command to keep prompting the user until he specifies
+   a command
+
+Algorithm for exec_shell():
+1. If the current call of exec_shell is within a subshell, set a flag
+   letting the current run know that it is in a subshell and make sure
+   the loop terminates.
+   
+2. While true and not in a subshell
+
+3.    If there are no saved args from a semicolon command call
+
+4.       Print prompt and get command
+
+5.    Else there are saved arguments that need to be processed from a
+      semicolon call.
+      
+6.    If "exit" was passed, exit the program. If no argument was
+      passed, print prompt again.
+      
+7.    Parse through the arguments, trying to find out if a special
+      command was passed.
+      
+8.    If a call was made for a subshell, call the function recursivly.
+      Upon exit, change the directory of outer shell back if changed.
+      
+9.    Else, execute command passed.
+
+10.   If within a subshell and a semicolon command was used, stay in
+      the loop.
+      
+11.   Reset flags and variables for beginning of loop.
